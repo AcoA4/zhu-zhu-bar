@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>猜謎遊戲 - 玩家搶答</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col justify-between p-4 md:p-6">
+
+  <!-- Header -->
+  <header class="max-w-md mx-auto w-full flex justify-between items-center bg-slate-800/60 backdrop-blur-md p-4 rounded-2xl border border-slate-700/50 mb-4 shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+        <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-base text-slate-100">猜謎大挑戰</h1>
+        <p class="text-xs text-indigo-400 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 實時搶答中
+        </p>
+      </div>
+    </div>
+    
+    <!-- Player Nickname Tag -->
+    <button id="change-name-btn" onclick="openNameModal()" class="flex items-center gap-2 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/60 px-3 py-1.5 rounded-xl transition text-xs font-medium text-slate-200">
+      <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-400"></i>
+      <span id="player-display-name">設定暱稱</span>
+      <i data-lucide="edit-2" class="w-3.5 h-3 text-slate-400"></i>
+    </button>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto w-full flex-1 flex flex-col gap-4">
+    
+    <!-- Current Question Card -->
+    <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 p-5 rounded-2xl shadow-xl">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+          <i data-lucide="help-circle" class="w-3.5 h-3.5"></i> 當前題目
+        </span>
+        <span id="question-time" class="text-[10px] text-slate-400">--:--</span>
+      </div>
+      <h2 id="current-question-display" class="text-lg font-extrabold text-white leading-snug">
+        等待主持人發布題目...
+      </h2>
+    </div>
+
+    <!-- Answer Submission Card -->
+    <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 p-5 rounded-2xl shadow-xl flex flex-col gap-3">
+      <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+        <i data-lucide="send" class="w-3.5 h-3.5 text-indigo-400"></i> 輸入您的答案
+      </label>
+      <div class="relative">
+        <input id="answer-input" type="text" placeholder="輸入答案並搶答..." 
+          class="w-full bg-slate-900/80 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white rounded-xl px-4 py-3 text-sm transition outline-none"
+          onkeydown="if(event.key === 'Enter') submitAnswer()" />
+      </div>
+      <button onclick="submitAnswer()" class="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/30 transition duration-200 flex items-center justify-center gap-2 text-sm">
+        <i data-lucide="zap" class="w-4 h-4"></i> 送出搶答
+      </button>
+    </div>
+
+    <!-- My Recent Submissions Log -->
+    <div class="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 flex-1 flex flex-col">
+      <h3 class="text-xs font-bold text-slate-400 mb-3 flex items-center justify-between">
+        <span class="flex items-center gap-1.5"><i data-lucide="history" class="w-3.5 h-3.5"></i> 我的發送紀錄</span>
+        <span class="text-[10px] font-normal text-slate-500">（僅自己可見）</span>
+      </h3>
+      <div id="my-history-list" class="flex-1 space-y-2 overflow-y-auto max-h-[220px] pr-1">
+        <div class="text-center text-xs text-slate-500 py-6">本回合尚未送出答案</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-500 mt-6">
+    猜謎遊戲 玩家專用版
+  </footer>
+
+  <!-- Nickname Setup Modal -->
+  <div id="name-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="w-12 h-12 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto mb-3">
+          <i data-lucide="user-plus" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">設定您的搶答暱稱</h3>
+        <p class="text-xs text-slate-400 mt-1">請輸入其他玩家與主持人辨識您的名字</p>
+      </div>
+      <div>
+        <input id="modal-nickname-input" type="text" maxlength="15" placeholder="例如：夜市小霸王" 
+          class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white rounded-xl px-4 py-3 text-sm transition outline-none"
+          onkeydown="if(event.key === 'Enter') saveNickname()" />
+      </div>
+      <button onclick="saveNickname()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg transition text-sm">
+        確定並開始搶答
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Firebase 初始化
+    const firebaseConfig = {
+      apiKey: "AIzaSyDummyKeyForQuizGameCanvasSync",
+      authDomain: "quiz-game-demo.firebaseapp.com",
+      projectId: "quiz-game-demo",
+      storageBucket: "quiz-game-demo.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:quizgamedemo"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+
+    // 本地 User ID 產生
+    let userId = localStorage.getItem('quiz_user_id');
+    if (!userId) {
+      userId = 'user_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('quiz_user_id', userId);
+    }
+
+    let currentNickname = localStorage.getItem('quiz_nickname') || '';
+    let currentRoundId = 1;
+
+    // DOM Ready
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      
+      if (!currentNickname) {
+        openNameModal();
+      } else {
+        document.getElementById('player-display-name').innerText = currentNickname;
+        document.getElementById('name-modal').classList.add('hidden');
+      }
+
+      // 監聽題目變更
+      db.collection('game_state').doc('current').onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById('current-question-display').innerText = data.question || '等待主持人發布題目...';
+          document.getElementById('question-time').innerText = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+          
+          if (data.roundId !== currentRoundId) {
+            currentRoundId = data.roundId || 1;
+            loadMyHistory();
+          }
+        }
+      });
+
+      loadMyHistory();
+    });
+
+    function openNameModal() {
+      document.getElementById('modal-nickname-input').value = currentNickname;
+      document.getElementById('name-modal').classList.remove('hidden');
+      document.getElementById('modal-nickname-input').focus();
+    }
+
+    // 🔥 補回並修復的 saveNickname 函式
+    function saveNickname() {
+      const val = document.getElementById('modal-nickname-input').value.trim();
+      if (!val) {
+        alert('請輸入有效的暱稱！');
+        return;
+      }
+      currentNickname = val;
+      localStorage.setItem('quiz_nickname', currentNickname);
+      document.getElementById('player-display-name').innerText = currentNickname;
+      document.getElementById('name-modal').classList.add('hidden');
+    }
+
+    async function submitAnswer() {
+      if (!currentNickname) {
+        openNameModal();
+        return;
+      }
+      const inputEl = document.getElementById('answer-input');
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      const now = new Date();
+      const payload = {
+        userId: userId,
+        nickname: currentNickname,
+        answer: text,
+        timestamp: now.getTime(),
+        createdAt: now.toISOString(),
+        roundId: currentRoundId
+      };
+
+      inputEl.value = '';
+
+      try {
+        await db.collection('submissions').add(payload);
+        loadMyHistory();
+      } catch (err) {
+        console.error("發送失敗: ", err);
+        alert("發送失敗，請稍後再試！");
+      }
+    }
+
+    // 載入僅屬於該玩家的發送紀錄
+    function loadMyHistory() {
+      db.collection('submissions')
+        .where('userId', '==', userId)
+        .onSnapshot(snapshot => {
+          const container = document.getElementById('my-history-list');
+          if (snapshot.empty) {
+            container.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">本回合尚未送出答案</div>`;
+            return;
+          }
+
+          let items = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.roundId === currentRoundId) {
+              items.push(data);
+            }
+          });
+
+          items.sort((a, b) => b.timestamp - a.timestamp);
+
+          if (items.length === 0) {
+            container.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">本回合尚未送出答案</div>`;
+            return;
+          }
+
+          let html = '';
+          items.forEach(item => {
+            const timeStr = new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            html += `
+              <div class="bg-slate-900/60 border border-slate-700/50 p-2.5 rounded-xl flex justify-between items-center text-xs">
+                <span class="font-medium text-slate-200">${escapeHtml(item.answer)}</span>
+                <span class="text-[10px] text-slate-400">${timeStr}</span>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
