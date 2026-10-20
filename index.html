@@ -37,7 +37,7 @@
     <!-- Player Nickname Tag -->
     <button id="change-name-btn" onclick="openNameModal()" class="flex items-center gap-2 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/60 px-3 py-1.5 rounded-xl transition text-xs font-medium text-slate-200">
       <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-400"></i>
-      <span id="player-display-name">設定暱稱</span>
+      <span id="player-display-name">你是誰</span>
       <i data-lucide="edit-2" class="w-3.5 h-3 text-slate-400"></i>
     </button>
   </header>
@@ -54,7 +54,7 @@
         <span id="question-time" class="text-[10px] text-slate-400">--:--</span>
       </div>
       <h2 id="current-question-display" class="text-lg font-extrabold text-white leading-snug">
-        等待主持人發布題目...
+        等阿口一下啦...
       </h2>
     </div>
 
@@ -80,7 +80,7 @@
         <span class="text-[10px] font-normal text-slate-500">（僅自己可見）</span>
       </h3>
       <div id="my-history-list" class="flex-1 space-y-2 overflow-y-auto max-h-[220px] pr-1">
-        <div class="text-center text-xs text-slate-500 py-6">本回合尚未送出答案</div>
+        <div class="text-center text-xs text-slate-500 py-6">哩喜勒綑喔</div>
       </div>
     </div>
 
@@ -88,7 +88,7 @@
 
   <!-- Footer -->
   <footer class="text-center text-xs text-slate-500 mt-6">
-    猜謎遊戲 玩家專用版
+    距離助助吧100年還有99年83天
   </footer>
 
   <!-- Nickname Setup Modal -->
@@ -98,11 +98,11 @@
         <div class="w-12 h-12 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mx-auto mb-3">
           <i data-lucide="user-plus" class="w-6 h-6"></i>
         </div>
-        <h3 class="text-lg font-bold text-white">設定您的搶答暱稱</h3>
-        <p class="text-xs text-slate-400 mt-1">請輸入其他玩家與主持人辨識您的名字</p>
+        <h3 class="text-lg font-bold text-white">你是誰</h3>
+        <p class="text-xs text-slate-400 mt-1">第一名可以獲得熱烈的掌聲👏</p>
       </div>
       <div>
-        <input id="modal-nickname-input" type="text" maxlength="15" placeholder="例如：夜市小霸王" 
+        <input id="modal-nickname-input" type="text" maxlength="15" placeholder="例如：梅川伊芙" 
           class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white rounded-xl px-4 py-3 text-sm transition outline-none"
           onkeydown="if(event.key === 'Enter') saveNickname()" />
       </div>
@@ -155,7 +155,7 @@
       db.collection('game_state').doc('current').onSnapshot(doc => {
         if (doc.exists) {
           const data = doc.data();
-          document.getElementById('current-question-display').innerText = data.question || '等待主持人發布題目...';
+          document.getElementById('current-question-display').innerText = data.question || '等阿口一下啦...';
           document.getElementById('question-time').innerText = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
           
           if (data.roundId !== currentRoundId) {
